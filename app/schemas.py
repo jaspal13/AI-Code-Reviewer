@@ -19,6 +19,7 @@ class Confidence(str, Enum):
     LOW = "low"
 
 class Category(str, Enum):
+    SYNTAX_ERROR = "syntax_error"
     NULL_SAFETY = "null_safety"
     METHOD_RESPONSIBILITY = "method_responsibility"
     LAYERING = "layering"

@@ -1,3 +1,4 @@
+import json
 from app.schemas import (
     ReviewResponse,
     ReviewItem,
@@ -7,36 +8,30 @@ from app.schemas import (
     Confidence,
     Category,
 )
+from app.llm_client import call_llm
+from app.prompts import SYNTAX_REVIEW_PROMPT
 
 def generate_review(diff: str) -> ReviewResponse:
     """
     Core review orchestrator.
     Later: calls syntax / quality / design analyzers.
     """
-
-    reviews = [
-        ReviewItem(
-            file="src/main/java/com/example/UserController.java",
-            start_line=42,
-            end_line=67,
-            lens=Lens.DESIGN,
-            severity=Severity.HIGH,
-            category=Category.LAYERING,
-            title="Business logic inside controller",
-            description="Business logic is present in the controller layer.",
-            recommendation="Move logic into a service layer.",
-            confidence=Confidence.HIGH,
-        )
+    raw_response = call_llm(
+        SYNTAX_REVIEW_PROMPT.format(diff=diff)
+    )
+    parsed = json.loads(raw_response)
+    syntax_reviews = [
+        ReviewItem(**item) for item in parsed
     ]
 
     summary = Summary(
-        files_reviewed=1,
-        total_findings=1,
-        critical_issues=0,
+        files_reviewed=len({r.file for r in syntax_reviews}),
+        total_findings=len(syntax_reviews),
+        critical_issues=sum(1 for r in syntax_reviews if r.severity == Severity.CRITICAL),
         quality_issues=0,
         design_suggestions=1,
-        overall_risk=Severity.MEDIUM,
+        overall_risk=Severity.MEDIUM if syntax_reviews else Severity.LOW
     )
 
-    return ReviewResponse(summary=summary, reviews=reviews)
+    return ReviewResponse(summary=summary, reviews=syntax_reviews)
  
