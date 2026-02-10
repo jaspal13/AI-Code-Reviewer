@@ -25,6 +25,20 @@ class Category(str, Enum):
     LAYERING = "layering"
     PATTERN_MISUSE = "pattern_misuse"
 
+LENS_TO_CATEGORIES = {
+    Lens.SYNTAX: {
+        Category.SYNTAX_ERROR,
+    },
+    Lens.QUALITY: {
+        Category.NULL_SAFETY,
+        Category.METHOD_RESPONSIBILITY,
+    },
+    Lens.DESIGN: {
+        Category.LAYERING,
+        Category.PATTERN_MISUSE,
+    },
+}
+
 """
 {
   "file": "src/main/java/com/example/UserController.java",
@@ -55,6 +69,19 @@ class ReviewItem(BaseModel):
         start_line = info.data.get("start_line")
         if start_line is not None and v < start_line:
             raise ValueError("end_line must be >= start_line")
+        return v
+    
+    @field_validator("category")
+    def validate_category(cls, v, info):
+        lens = info.data.get("lens")
+        if lens is None:
+            return v
+        allowed = LENS_TO_CATEGORIES.get(lens, set())
+        if v not in allowed:
+            raise ValueError(
+                f"Category '{v}' is not valid for lens '{lens}'. "
+                f"Allowed: {[c.value for c in allowed]}"
+            )
         return v
 
 """
